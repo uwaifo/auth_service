@@ -1,0 +1,20 @@
+name: jx-app-auth
+image: okteto/golang:1
+command: bash
+securityContext:
+  capabilities:
+    add:
+    - SYS_PTRACE
+volumes:
+- /go/pkg/
+- /root/.cache/go-build/
+sync:
+- .:/usr/src/app
+- ../app-proto:/usr/src/app-proto
+forward:
+- 8081:80
+- 8082:80
+resources:
+  limits:
+    cpu: "1"
+    memory: 2Gi

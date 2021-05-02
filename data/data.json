@@ -1,0 +1,57 @@
+{
+  "user_one": {
+    "password": "@testUser",
+    "email": "user_one.test@clipsynphony.com",
+    "username": "test_user",
+    "firstname": "Test",
+    "lastname": "User",
+    "picture": "",
+    "age": 22,
+    "verified": true,
+    "provider": "local"
+  },
+  "user_two": {
+    "password": "@testUser",
+    "email": "user_two.test@clipsynphony.com",
+    "username": "test_user",
+    "firstname": "Test",
+    "lastname": "User",
+    "picture": "",
+    "age": 21,
+    "verified": true,
+    "provider": "local"
+  },
+  "user_three": {
+    "password": "@testUser",
+    "email": "user_three.test@clipsynphony.com",
+    "username": "test_user",
+    "firstname": "Test",
+    "lastname": "User",
+    "picture": "",
+    "age": 39,
+    "verified": true,
+    "provider": "local"
+  },
+  "user_four": {
+    "password": "@testUser",
+    "email": "user_four.test@clipsynphony.com",
+    "username": "test_user",
+    "firstname": "Test",
+    "lastname": "User",
+    "picture": "",
+    "age": 52,
+    "verified": true,
+    "provider": "local"
+  },
+  "user_five": {
+    "password": "@testUser",
+    "email": "user_five.test@clipsynphony.com",
+    "username": "test_user",
+    "firstname": "Test",
+    "lastname": "User",
+    "picture": "",
+    "age": 43,
+    "verified": true,
+    "provider": "local"
+  }
+}

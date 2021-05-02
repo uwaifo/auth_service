@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-auth
+  labels:
+    app: auth-server
+spec:
+  containers:
+    - name: app-auth
+      image: eu.gcr.io/clipfiler/app-auth:latest
+      command: ["./app-auth"]

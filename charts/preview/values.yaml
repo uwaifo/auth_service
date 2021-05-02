@@ -1,0 +1,18 @@
+preview:
+  image:
+    repository:
+    tag:
+    pullPolicy: IfNotPresent
+
+  resources:
+    limits:
+      memory: 16Mi
+    requests:
+      cpu: 100m
+      memory: 16Mi
+
+  env:
+    MONGO_URL: "mongodb://preview-mongodb-replicaset:27017/?replicaSet=clipset"
+    REDIS_URL: "preview-redis-master:6379"
+    MONGO_DB_NAME: "preview"
+    REDIS_PASSWORD: ""

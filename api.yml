@@ -1,0 +1,2908 @@
+openapi: 3.0.2
+
+info:
+  title: id.scaratec.com
+  version: 2.0.0
+  description: microservice for managing user identities and user access/authorizations
+  contact:
+    email: dannymcwaves@icloud.com
+  termsOfService: https://www.scaratec.com/
+
+servers:
+  - url: http://localhost
+    description: Main server endpoint for localhost testing
+  - url: https://auth.staging.id.scaratec.com
+    description: IAM service deployed in the staging environment for preliminary user testing
+  - url: https://auth.pr-{NUMBER}.staging.id.scaratec.com
+    description: IAM service deployed in a preview environment for testing. the {NUMBER} placeholder
+      represents the pull request number
+  - url: https://id.scaratec.com
+    description: production environment deployment of IAM service, also dubbed id.scaratec.com
+
+tags:
+  - name: IAM
+    description: IAM service management
+  - name: Authorization and access management
+    description: Authorization and access management service
+  - name: Organisation and team management
+    description: Organisations and teams management service
+
+components:
+  securitySchemes:
+
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+
+  /:
+    get:
+      summary: access denied for unsupported routes
+      security: []
+      responses:
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '200':
+          description: A message of access denied
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Access Denied
+
+  /ping:
+    get:
+      summary: Non-Authorization ping without requiring jWT
+      security: []
+      responses:
+        '200':
+          description: A PONG SERVER UP message is returned in case of success
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "[PONG] SERVER UP"
+
+  /user/auth/{provider}:
+    get:
+      summary: authentication with social login. providers currently are facebook and google
+      security: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          description: social authentication parameter which redirects to a third party application to get authentication
+            tokens
+          schema:
+            type: string
+      responses:
+        '307':
+          description: A temporary redirect to 3rd party servers to generate authentication token and user information
+  /user/auth/{provider}/callback:
+    get:
+      summary: authentication callback using social login
+      security: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          description: social authentication callback for a speicific provider; which is google or facebook.
+            This becomes the redirect url after login with 3rd party social platform is completed.
+          schema:
+            type: string
+      responses:
+        '307':
+          description: After auth is generated from the 3rd party service, we generated tokens with user information
+            and redirect the user to an application.
+  /user/login:
+    post:
+      summary: user login. posting user data
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                app:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: A JSON object containing logged in user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user_id:
+                    type: string
+                  refresh:
+                    type: string
+                  expires:
+                    type: string
+                  message:
+                    type: string
+                example:
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+                  user_id: 1234567890
+                  refresh: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+                  expires: 1587561599510
+                  message: User not found
+        '404':
+          description: A JSON object containing error information and empty user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user_id:
+                    type: string
+                  refresh:
+                    type: string
+                  expires:
+                    type: string
+                  message:
+                    type: string
+                example:
+                  token: ""
+                  user_id: ""
+                  refresh: ""
+                  expires: ""
+                  message: User not found
+  /user/signup:
+    post:
+      summary: handling user signup
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                app:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                username:
+                  type: string
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                picture:
+                  type: string
+                appRedirectUrl:
+                  type: string
+      responses:
+        '201':
+          description: A JSON object containing signup information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  time:
+                    type: string
+                  message:
+                    type: string
+                  status:
+                    type: string
+                example:
+                  time: 1234567890
+                  message: User Successfully created
+                  status: 201
+        '400':
+          description: A JSON object containing empty signup information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  time:
+                    type: string
+                  message:
+                    type: string
+                  status:
+                    type: string
+                example:
+                  time: 1234567890
+                  message: User already exists
+                  status: 404
+  /user/logout:
+    get:
+      summary: handling user logout
+      security: []
+      responses:
+        '200':
+          description: A JSON object containing signup information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: string
+                example:
+                  message: Logout Successful
+                  status: 200
+  /user/login-signup-confirm:
+    post:
+      summary: when the user is invited and the user isn't logged in or doesn't have an account on id.scaratec.com
+        this handles the little popup screen where the user logs in and gets authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                app:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '201':
+          description: A JSON object containing logged in user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user_id:
+                    type: string
+                  refresh:
+                    type: string
+                  expires:
+                    type: string
+                  message:
+                    type: string
+                example:
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+                  user_id: 1234567890
+                  refresh: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+                  expires: 1587561599510
+                  message: User not found
+        '404':
+          description: A JSON object containing error information and empty user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user_id:
+                    type: string
+                  refresh:
+                    type: string
+                  expires:
+                    type: string
+                  message:
+                    type: string
+                example:
+                  token: ""
+                  user_id: ""
+                  refresh: ""
+                  expires: ""
+                  message: User not found
+  /user/confirm/{confirmationId}/redirect/{redirectId}:
+    get:
+      summary: handling user signup email confirmation
+      parameters:
+        - name: confirmationId
+          in: path
+          required: true
+          description: redis generated confirmation id for finding user data
+          schema:
+            type: string
+        - name: redirectId
+          in: path
+          required: true
+          description: redis generated id for finding redirectUrl
+          schema:
+            type: string
+      security: []
+      responses:
+        '307':
+          description: Redirect user to application page after confirming signup email or
+            signup page when the uer user is not found
+        '404':
+          description: A JSON object containing error information on unfound/expired verification ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                example:
+                  status: Verification link not found
+  /user/user-invite-confirm/{confirmationId}:
+    get:
+      summary: handling user invite confirmations
+      parameters:
+        - name: confirmationId
+          in: path
+          required: true
+          description: redis generated confirmation id for finding user data
+          schema:
+            type: string
+      security: []
+      responses:
+        '307':
+          description: Redirect user to application page after confirming team invite email
+        '404':
+          description: A JSON object error when the user information is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User information not available
+                  status: 404
+                  error: false
+                  type: ConfirmMemberInvite
+                  state: Unsuccessful
+        '400':
+          description: A JSON object containing error information on unfound/expired verification ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                example:
+                  status: Verification link not found
+        '500':
+          description: A JSON object error when there's a problem updating user invite information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: Error updating user verification status in db
+                  status: 500
+                  error: true
+                  type: ConfirmMemberInvite
+                  state: Unsuccessful
+
+  /token/refresh:
+    get:
+      summary: get a new refresh token using an access token
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A JSON object containing access and refresh tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user_id:
+                    type: string
+                  refresh:
+                    type: string
+                  expires:
+                    type: string
+                  message:
+                    type: string
+                example:
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+                  user_id: 1234567890
+                  refresh: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+                  expires: 1587561599510
+                  message: ""
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object containing error information and empty user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user_id:
+                    type: string
+                  refresh:
+                    type: string
+                  expires:
+                    type: string
+                  message:
+                    type: string
+                example:
+                  token: ""
+                  user_id: ""
+                  refresh: ""
+                  expires: ""
+                  message: User data not found
+    post:
+      summary: get a new access token using a refresh token
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: A JSON object containing access and refresh tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user_id:
+                    type: string
+                  refresh:
+                    type: string
+                  expires:
+                    type: string
+                  message:
+                    type: string
+                example:
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+                  user_id: 1234567890
+                  refresh: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+                  expires: 1587561599510
+                  message: ""
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '424':
+          description: A JSON object error when the post data has an empty token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                example:
+                  message: Missing refresh token
+                  status: 424
+        '404':
+          description: A JSON object containing error information and empty user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user_id:
+                    type: string
+                  refresh:
+                    type: string
+                  expires:
+                    type: string
+                  message:
+                    type: string
+                example:
+                  token: ""
+                  user_id: ""
+                  refresh: ""
+                  expires: ""
+                  message: User data not found
+
+  /stats:
+    get:
+      summary: get stats for the currently logged in user. number of organisations or teams created,
+        user invites or invites recieved.
+      security:
+        - bearerAuth: []
+      responses:
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '200':
+          description: A JSON array of user teams within organisation specified by Id
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organisations:
+                    type: integer
+                  teams:
+                    type: integer
+                  received_invites:
+                    type: integer
+                  sent_invites:
+                    type: integer
+                  username:
+                    type: string
+                  verified:
+                    type: boolean
+                  active:
+                    type: boolean
+                example:
+                  organisations: 2
+                  teams: 3
+                  received_invites: 0
+                  sent_invites: 3
+                  username: user
+                  verified: true
+                  active: true
+  /me:
+    get:
+      summary: returns a user information.
+      security:
+        - bearerAuth: []
+      responses:
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '200':
+          description: A JSON array of user teams within organisation specified by Id
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    type: string
+                  username:
+                    type: string
+                  firstName:
+                    type: string
+                  lastName:
+                    type: string
+                  picture:
+                    type: string
+                  active:
+                    type: boolean
+                  verified:
+                    type: boolean
+                  provider:
+                    type: string
+                example:
+                  email: user@example.com
+                  username: user
+                  firstName: test
+                  lastName: User
+                  picture: https://link.to.cloud/storage/com
+                  active: true
+                  verified: true
+                  provider: local/google/facebook
+                  id: w7ryhoitmpoew-ejighieuoi-eirgiuerh-etu4iyt
+  /teams:
+    get:
+      summary: returns teams for the currently logged in user
+      security:
+        - bearerAuth: []
+      responses:
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '200':
+          description: A JSON array of user teams within organisation specified by Id
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    app:
+                      type: string
+                    organisation_name:
+                      type: string
+                    organisation_id:
+                      type: string
+                    members:
+                      type: array
+                      items:
+                        type: string
+                    created_by:
+                      type: string
+                    created_at:
+                      type: string
+                    update_at:
+                      type: string
+        '404':
+          description: A JSON object with with no teams found message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                example:
+                  message: User teams not found
+                  status: 404
+                  error: false
+                  type: GetTeams
+
+  /organisations:
+    get:
+      summary: returns a list of all organisations created by the user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A JSON array of user organisations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    app:
+                      type: string
+                    teams:
+                      type: array
+                      items:
+                        type: string
+                    created_by:
+                      type: string
+                    created_at:
+                      type: string
+                    update_at:
+                      type: string
+        '404':
+          description: A JSON object with with no organisations found message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                example:
+                  message: User organisations not found
+                  status: 404
+                  error: false
+                  type: GetOrganisations
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+  /organisation:
+    post:
+      summary: create a new organisation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: A JSON response returning the created organisation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  app:
+                    type: string
+                  teams:
+                    type: array
+                    items:
+                      type: string
+                  created_by:
+                    type: string
+                  created_at:
+                    type: string
+                  update_at:
+                    type: string
+                example:
+                  id: 5f7babdf-4b53-4297-9859-b8a5b9ee20fc
+                  name: Any Organisation
+                  app: Clipsynphony
+                  teams: [5f7babdf-4b53-4297-9859-b8a5b9ee2hf49]
+                  created_by: 12ffbed4-323e-499c-ab24-999287b8b12a
+                  created_at: Tue Apr 21 2020 14:32:32 GMT+0200 (Central Africa Time)
+                  updated_at: Tue Apr 21 2020 14:32:32 GMT+0200 (Central Africa Time)
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '500':
+          description: A JSON object describing an error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation not created
+                  status: 500
+                  error: true
+                  type: GetOrganisation
+                  state: Unsuccessful
+  /organisation/{id}:
+    get:
+      summary: Endpoint for interaction with and performing HTTP CRUD actions on organisations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding organisation
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON response returning the organisation by id paramter
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  app:
+                    type: string
+                  teams:
+                    type: array
+                    items:
+                      type: string
+                  created_by:
+                    type: string
+                  created_at:
+                    type: string
+                  update_at:
+                    type: string
+                example:
+                  id: 5f7babdf-4b53-4297-9859-b8a5b9ee20fc
+                  name: Any Organisation
+                  app: Clipsynphony
+                  teams: [5f7babdf-4b53-4297-9859-b8a5b9ee2hf49]
+                  created_by: 12ffbed4-323e-499c-ab24-999287b8b12a
+                  created_at: Tue Apr 21 2020 14:32:32 GMT+0200 (Central Africa Time)
+                  updated_at: Tue Apr 21 2020 14:32:32 GMT+0200 (Central Africa Time)
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON response with details of failed request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                example:
+                  message: User organisations not found
+                  status: 404
+                  error: false
+                  type: GetOrganisation
+    put:
+      summary: Update an organisation details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding and updating organisation
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: JSON response for successful updates to the organisation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  app:
+                    type: string
+                  teams:
+                    type: array
+                    items:
+                      type: string
+                  created_by:
+                    type: string
+                  created_at:
+                    type: string
+                  update_at:
+                    type: string
+                example:
+                  id: 5f7babdf-4b53-4297-9859-b8a5b9ee20fc
+                  name: Any Organisation
+                  app: Clipsynphony
+                  teams: [5f7babdf-4b53-4297-9859-b8a5b9ee2hf49]
+                  created_by: 12ffbed4-323e-499c-ab24-999287b8b12a
+                  created_at: Tue Apr 21 2020 14:32:32 GMT+0200 (Central Africa Time)
+                  updated_at: Tue Apr 21 2020 14:32:32 GMT+0200 (Central Africa Time)
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON response detailing a response of a non-existing organisation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation not found
+                  status: 404
+                  error: false
+                  type: PutOrganisations
+                  state: Unsuccessful
+        '500':
+          description: A JSON object describing an error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation not updated
+                  status: 500
+                  error: true
+                  type: PutOrganisation
+                  state: Unsuccessful
+    delete:
+      summary: Delete an existing organisation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding and removing organisation
+          schema:
+            type: string
+      responses:
+        '200':
+          description: JSON delete response containing information on delete count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation removed
+                  status: 200
+                  error: false
+                  type: DeleteOrganisation
+                  state: Successful
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON response detailing a response of a non-existing organisation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation not found
+                  status: 404
+                  error: false
+                  type: DeleteOrganisation
+                  state: Unsuccessful
+        '500':
+          description: A JSON object describing an error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation not removed
+                  status: 500
+                  error: true
+                  type: DeleteOrganisation
+                  state: Unsuccessful
+
+  /organisatio/{id}/teams:
+    get:
+      summary: return a list of all available teams within an organisation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding organisation
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON array of user teams within organisation specified by Id
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    app:
+                      type: string
+                    organisation_name:
+                      type: string
+                    organisation_id:
+                      type: string
+                    members:
+                      type: array
+                      items:
+                        type: string
+                    created_by:
+                      type: string
+                    created_at:
+                      type: string
+                    update_at:
+                      type: string
+        '404':
+            description: A JSON object with with no teams found message
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                    status:
+                      type: integer
+                    error:
+                      type: boolean
+                    type:
+                      type: string
+                  example:
+                    message: User teams not found
+                    status: 404
+                    error: false
+                    type: GetTeams
+        '400':
+            description: A JSON object with failed authorization message
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                  example:
+                    message: missing or malformed jwt
+  /organisation/{id}/team:
+    post:
+      summary: Add a new team to the organisation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding organisation
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: A JSON object containing team data of the recently created team.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    app:
+                      type: string
+                    organisation_name:
+                      type: string
+                    organisation_id:
+                      type: string
+                    members:
+                      type: array
+                      items:
+                        type: string
+                    created_by:
+                      type: string
+                    created_at:
+                      type: string
+                    update_at:
+                      type: string
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '500':
+          description: A JSON object describing an error
+          content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                    status:
+                      type: integer
+                    error:
+                      type: boolean
+                    type:
+                      type: string
+                    state:
+                      type: string
+                  example:
+                    message: User team not created
+                    status: 500
+                    error: true
+                    type: PostTeam
+                    state: Unsuccessful
+  /organisation/{id}/team/{team}:
+    get:
+      summary: return a specific team with the organisation by the specifed team ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding organisation
+          schema:
+            type: string
+        - name: team
+          in: path
+          required: true
+          description: team uuid id for finding a team within an organisation
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object containing team data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    app:
+                      type: string
+                    organisation_name:
+                      type: string
+                    organisation_id:
+                      type: string
+                    members:
+                      type: array
+                      items:
+                        type: string
+                    created_by:
+                      type: string
+                    created_at:
+                      type: string
+                    update_at:
+                      type: string
+                  example:
+                    id: 5f7babdf-4b53-4297-9859-b8a5b9ee20fc
+                    name: Any Team
+                    app: Clipsynphony
+                    organisation_name: Any Organisation
+                    organisation_id: 5f7babdf-4b53-4297-9859-b8a5b9ee20fc
+                    members: [5f7babdf-4b53-4297-9859-b8a5b9ee2hf49]
+                    created_by: 12ffbed4-323e-499c-ab24-999287b8b12a
+                    created_at: Tue Apr 21 2020 14:32:32 GMT+0200 (Central Africa Time)
+                    updated_at: Tue Apr 21 2020 14:32:32 GMT+0200 (Central Africa Time)
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the orgnisation or team is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation/team not found
+                  status: 404
+                  error: false
+                  type: GetTeam
+                  state: Unsuccessful
+    put:
+      summary: Update an existing team within the organisation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding organisation
+          schema:
+            type: string
+        - name: team
+          in: path
+          required: true
+          description: team uuid id for finding a team within an organisation
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: A JSON object containing team data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    app:
+                      type: string
+                    organisation_name:
+                      type: string
+                    organisation_id:
+                      type: string
+                    members:
+                      type: array
+                      items:
+                        type: string
+                    created_by:
+                      type: string
+                    created_at:
+                      type: string
+                    update_at:
+                      type: string
+                  example:
+                    id: 5f7babdf-4b53-4297-9859-b8a5b9ee20fc
+                    name: Any Team
+                    app: Clipsynphony
+                    organisation_name: Any Organisation
+                    organisation_id: 5f7babdf-4b53-4297-9859-b8a5b9ee20fc
+                    members: [5f7babdf-4b53-4297-9859-b8a5b9ee2hf49]
+                    created_by: 12ffbed4-323e-499c-ab24-999287b8b12a
+                    created_at: Tue Apr 21 2020 14:32:32 GMT+0200 (Central Africa Time)
+                    updated_at: Tue Apr 21 2020 14:32:32 GMT+0200 (Central Africa Time)
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the orgnisation or team is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation/team not found
+                  status: 404
+                  error: false
+                  type: PutTeam
+                  state: Unsuccessful
+        '500':
+          description: A JSON object describing an error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User Team not updated
+                  status: 500
+                  error: true
+                  type: PutTeam
+                  state: Unsuccessful
+    delete:
+      summary: Remove an existing team within the organisation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding organisation
+          schema:
+            type: string
+        - name: team
+          in: path
+          required: true
+          description: team uuid id for finding a team within an organisation
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object containing delete information and number of team deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User team removed
+                  status: 200
+                  error: false
+                  type: DeleteTeam
+                  state: Successful
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the orgnisation or team is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation/team not found
+                  status: 404
+                  error: false
+                  type: DeleteTeam
+                  state: Unsuccessful
+        '500':
+          description: A JSON object describing an error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User Team not updated
+                  status: 500
+                  error: true
+                  type: DeleteTeam
+                  state: Unsuccessful
+
+  /organisation/{id}/team/{team}/user:
+    post:
+      summary: Add a new team to the organisation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding organisation
+          schema:
+            type: string
+        - name: team
+          in: path
+          required: true
+          description: team uuid id for finding a team within an organisation
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                signupUrl:
+                  type: string
+                appRedirectUrl:
+                  type: string
+      responses:
+        '201':
+          description: A JSON object containing user data of the recently created user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  user_id:
+                    type: string
+                  user_email:
+                    type: string
+                  app:
+                    type: string
+                  state:
+                    type: string
+                  scopes:
+                    type: array
+                    items:
+                      type: string
+                  team_id:
+                    type: string
+                  organisation_id:
+                    type: string
+                  team_name:
+                    type: string
+                  organisation_name:
+                    type: string
+                example:
+                  id: "5f7babdf-4b53-4297-9859-b8a5b9ee20fc"
+                  user_id: "5f7babdf-4b53-4297-9859-b8a5b9ee20fc"
+                  user_email: "user_email@example.com"
+                  app: "clipsynphony"
+                  state: "Invited"
+                  scopes: [Admin, Editor]
+                  team_id: "5f7babdf-4b53-4297-9859-b8a5b9ee2hf49"
+                  organisation_id: "5f7babdf-4b53-4297-9859-b8a5b9ee2hf49"
+                  team_name: "Some Team"
+                  organisation_name: "Some Organisation"
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '500':
+          description: A JSON object describing an error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User Member not added to team
+                  status: 500
+                  error: true
+                  type: PostTeamMember
+                  state: Unsuccessful
+  /organisation/{id}/team/{team}/users:
+    get:
+      summary: return a list of all available memberss within an team
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding organisation
+          schema:
+            type: string
+        - name: team
+          in: path
+          required: true
+          description: team uuid id for finding a team within an organisation
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON array of all members with the team
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    user_id:
+                      type: string
+                    user_email:
+                      type: string
+                    app:
+                      type: string
+                    state:
+                      type: string
+                    scopes:
+                      type: array
+                      items:
+                        type: string
+                    team_id:
+                      type: string
+                    organisation_id:
+                      type: string
+                    team_name:
+                      type: string
+                    organisation_name:
+                      type: string
+                  example:
+                    id: "5f7babdf-4b53-4297-9859-b8a5b9ee20fc"
+                    user_id: "5f7babdf-4b53-4297-9859-b8a5b9ee20fc"
+                    user_email: "user_email@example.com"
+                    app: "clipsynphony"
+                    state: "Invited"
+                    scopes: [Admin, Editor]
+                    team_id: "5f7babdf-4b53-4297-9859-b8a5b9ee2hf49"
+                    organisation_id: "5f7babdf-4b53-4297-9859-b8a5b9ee2hf49"
+                    team_name: "Some Team"
+                    organisation_name: "Some Organisation"
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON error returned if the organisation or team or user is not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation/team/user not found
+                  status: 404
+                  error: false
+                  type: GetTeamMembers
+                  state: Unsuccessful
+
+  /organisation/{id}/team/{team}/user/{userId}:
+    get:
+      summary: return a specific user within the team specified by the ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding organisation
+          schema:
+            type: string
+        - name: team
+          in: path
+          required: true
+          description: team uuid id for finding a team within an organisation
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          description: user uuid id for finding a user within a team
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  user_id:
+                    type: string
+                  user_email:
+                    type: string
+                  app:
+                    type: string
+                  state:
+                    type: string
+                  scopes:
+                    type: array
+                    items:
+                      type: string
+                  team_id:
+                    type: string
+                  organisation_id:
+                    type: string
+                  team_name:
+                    type: string
+                  organisation_name:
+                    type: string
+                example:
+                  id: "5f7babdf-4b53-4297-9859-b8a5b9ee20fc"
+                  user_id: "5f7babdf-4b53-4297-9859-b8a5b9ee20fc"
+                  user_email: "user_email@example.com"
+                  app: "clipsynphony"
+                  state: "Invited"
+                  scopes: [Admin, Editor]
+                  team_id: "5f7babdf-4b53-4297-9859-b8a5b9ee2hf49"
+                  organisation_id: "5f7babdf-4b53-4297-9859-b8a5b9ee2hf49"
+                  team_name: "Some Team"
+                  organisation_name: "Some Organisation"
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the orgnisation or team or user is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation/team/user not found
+                  status: 404
+                  error: false
+                  type: GetTeamMember
+                  state: Unsuccessful
+    delete:
+      summary: Remove an existing user with a team
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding organisation
+          schema:
+            type: string
+        - name: team
+          in: path
+          required: true
+          description: team uuid id for finding a team within an organisation
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          description: user uuid id for finding a user within a team
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object containing delete information and number of users deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User team member removed
+                  status: 200
+                  error: false
+                  type: DeleteTeamMember
+                  state: Successful
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the orgnisation or team or is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User team removed
+                  status: 404
+                  error: false
+                  type: DeleteTeamMember
+                  state: Unsuccessful
+        '500':
+          description: A JSON object describing an error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User Member not removed from team
+                  status: 500
+                  error: true
+                  type: DeleteTeamMember
+                  state: Unsuccessful
+  /organisation/{id}/team/{team}/user/{userId}/scope:
+    post:
+      summary: Add or update the role of  an existing memeber within a organisational team
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding organisation
+          schema:
+            type: string
+        - name: team
+          in: path
+          required: true
+          description: team uuid id for finding a team within an organisation
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          description: user uuid id for finding a user within a team
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scope:
+                  type: string
+      responses:
+        '201':
+          description: A JSON of the updated user with the new scope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  user_id:
+                    type: string
+                  user_email:
+                    type: string
+                  app:
+                    type: string
+                  state:
+                    type: string
+                  scopes:
+                    type: array
+                    items:
+                      type: string
+                  team_id:
+                    type: string
+                  organisation_id:
+                    type: string
+                  team_name:
+                    type: string
+                  organisation_name:
+                    type: string
+                example:
+                  id: "5f7babdf-4b53-4297-9859-b8a5b9ee20fc"
+                  user_id: "5f7babdf-4b53-4297-9859-b8a5b9ee20fc"
+                  user_email: "user_email@example.com"
+                  app: "clipsynphony"
+                  state: "Invited"
+                  scopes: [Admin, Editor]
+                  team_id: "5f7babdf-4b53-4297-9859-b8a5b9ee2hf49"
+                  organisation_id: "5f7babdf-4b53-4297-9859-b8a5b9ee2hf49"
+                  team_name: "Some Team"
+                  organisation_name: "Some Organisation"
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the orgnisation or team or user is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation/team/user not found
+                  status: 404
+                  error: false
+                  type: PostTeamMemberScope
+                  state: Unsuccessful
+        '500':
+          description: A JSON object describing an error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User Member Scope not updated
+                  status: 500
+                  error: true
+                  type: PostTeamMemberScope
+                  state: Unsuccessful
+    delete:
+      summary: Remove role on an existing member within the team
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: organisation uuid id for finding organisation
+          schema:
+            type: string
+        - name: team
+          in: path
+          required: true
+          description: team uuid id for finding a team within an organisation
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          description: user uuid id for finding a user within a team
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scope:
+                  type: string
+      responses:
+        '200':
+          description: A JSON object containing delete information of user scopes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User team member removed
+                  status: 200
+                  error: false
+                  type: DeleteTeamMemberScope
+                  state: Successful
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the orgnisation or team or user is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User organisation/team/user not found
+                  status: 404
+                  error: false
+                  type: DeleteTeamMemberScope
+                  state: Unsuccessful
+        '500':
+          description: A JSON object describing an error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: User Member Scope not updated
+                  status: 500
+                  error: true
+                  type: DeleteTeamMemberScope
+                  state: Unsuccessful
+
+  /iam:
+    get:
+      summary: get all iam scopes created within for an application
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A JSON object with containing IAM scope information
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    scope:
+                      type: string
+                    permissions:
+                      type: array
+                      items:
+                        type: string
+                  example:
+                    scope: ROOT
+                    permissions: [DELETE_ORGANISATION, READ_ARTICLES]
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when no IAM scopes are found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                example:
+                  message: No IAM scopes found
+                  status: 404
+                  error: false
+                  type: GetIAMScope
+    post:
+      summary: add an IAM scope within an application
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scope:
+                  type: string
+                permissions:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: A JSON object containing saved IAM scope information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scope:
+                    type: string
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  scope: ROOT
+                  permissions: [DELETE_ORGANISATION, READ_ARTICLES]
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '500':
+          description: A JSON object error when there's an error post IAM scope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: Error saving IAM scope
+                  status: 500
+                  error: false
+                  type: PostIAMScope
+                  state: Unsuccessful
+  /iam/{id}:
+    get:
+      summary: get a specific IAM scope
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the speicific IAM object to return
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object containing IAM scope information of scope specified by id
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scope:
+                    type: string
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  scope: ROOT
+                  permissions: [DELETE_ORGANISATION, READ_ARTICLES]
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the IAM scope is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                example:
+                  message: IAM scope not found
+                  status: 404
+                  error: false
+                  type: GetIAMScope
+    delete:
+      summary: delete a specific IAM scope
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the speicific IAM to be removed
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object containing IAM scope information of deleted scope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scope:
+                    type: string
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  scope: ROOT
+                  permissions: [DELETE_ORGANISATION, READ_ARTICLES]
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the IAM scope is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                example:
+                  message: IAM scope not found
+                  status: 404
+                  error: false
+                  type: DeleteIAMScope
+        '500':
+          description: A JSON object error when there's an error post IAM scope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: Error saving IAM scope
+                  status: 500
+                  error: false
+                  type: PostIAMScope
+                  state: Unsuccessful
+    put:
+      summary: update an IAM scope
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the speicific IAM to be updated
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scope:
+                  type: string
+      responses:
+        '200':
+          description: A JSON object containing updated IAM scope information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scope:
+                    type: string
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  scope: ROOT
+                  permissions: [DELETE_ORGANISATION, READ_ARTICLES]
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the IAM scope is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                example:
+                  message: IAM scope not found
+                  status: 404
+                  error: false
+                  type: PutIAMScope
+        '500':
+          description: A JSON object error when there's an error updating IAM scope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: Error updating IAM scope
+                  status: 500
+                  error: false
+                  type: PutIAMScope
+                  state: Unsuccessful
+  /iam/{id}/permission:
+    delete:
+      summary: remove permission within an IAM scope
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the speicific IAM whose permissions needs to updated
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permission:
+                  type: string
+      responses:
+        '200':
+          description: A JSON object containing IAM scope information with updated permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scope:
+                    type: string
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  scope: ROOT
+                  permissions: [DELETE_ORGANISATION, READ_ARTICLES]
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the IAM scope is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                example:
+                  message: IAM scope not found
+                  status: 404
+                  error: false
+                  type: DeleteIAMScopePermission
+        '500':
+          description: A JSON object error when there's an error removing IAM scope permission
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: Error removing IAM scope permission
+                  status: 500
+                  error: false
+                  type: DeleteIAMScopePermission
+                  state: Unsuccessful
+    post:
+      summary: Add new permissions to an IAM scope
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the speicific IAM whose permission list needs to be updated
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permission:
+                  type: string
+      responses:
+        '200':
+          description: A JSON object containing IAM scope information with updated permission
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scope:
+                    type: string
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  scope: ROOT
+                  permissions: [DELETE_ORGANISATION, READ_ARTICLES]
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the IAM scope is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                example:
+                  message: IAM scope not found
+                  status: 404
+                  error: false
+                  type: PostIAMScopePermission
+        '500':
+          description: A JSON object error when there's an error saving IAM scope permission
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: Error saving IAM scope permission
+                  status: 500
+                  error: false
+                  type: PostIAMScopePermission
+                  state: Unsuccessful
+  /iam/{id}/permissions:
+    post:
+      summary: Add new permissions to an IAM scope
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the speicific IAM whose permission list needs to be updated
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permissions:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: A JSON object containing IAM scope information with newly added permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scope:
+                    type: string
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  scope: ROOT
+                  permissions: [DELETE_ORGANISATION, READ_ARTICLES]
+        '400':
+          description: A JSON object with failed authorization message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: missing or malformed jwt
+        '404':
+          description: A JSON object error when the IAM scope is not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                example:
+                  message: IAM scope not found
+                  status: 404
+                  error: false
+                  type: PostIAMScopePermissions
+        '500':
+          description: A JSON object error when there's an error saving IAM scope permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  error:
+                    type: boolean
+                  type:
+                    type: string
+                  state:
+                    type: string
+                example:
+                  message: Error saving IAM scope permissions
+                  status: 500
+                  error: false
+                  type: PostIAMScopePermissions
+                  state: Unsuccessful
